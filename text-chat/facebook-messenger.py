@@ -16,8 +16,8 @@ sys_config = {'interface': 'enp0s20f0u1',
 msg_config = {'num_pcaps': 11,  # number of pcaps to collect
               'num_texts': 1000,  # number of text messages per pcap
               'inter_text_gap': 3,
-              'sender_username': 'mnir@solananetworks.com',
-              'sender_pwd': 'Paul7377',
+              'sender_username': 'rinm@solananetworks.com',
+              'sender_pwd': 'laup7773',
               'receiver_account': 'https://www.facebook.com/messages/t/100685868602912'
               }
 
