@@ -9,8 +9,7 @@ subprocess.check_output(["sudo", "ifconfig",  INTERFACE, "-multicast" ])
 access_token = 'Z-XhybPdTJwAAAAAAAAAAZL94Qi9V2qGg38WpJHJPEzUbQMJe0i69TJ6sqXwemxL'
 dbx = dropbox.Dropbox(access_token)
 response = dbx.files_list_folder("/inputs/")
-print(list(response.entries))
-print("Number of files is : ",len(list(response.entries)))
+# print("Number of files is : ".format(len(list(response.entries))))
 for file in response.entries:
     print(file.name)
     x = file.name
