@@ -1,52 +1,67 @@
+import datetime
 import dropbox
 import os
 import subprocess
 
-# shut down offload
-dbx = dropbox.Dropbox('Z-XhybPdTJwAAAAAAAAAAZL94Qi9V2qGg38WpJHJPEzUbQMJe0i69TJ6sqXwemxL')
-INTERFACE = 'enp0s20f0u1'
-subprocess.check_output(
-    ["sudo", "ethtool", "-K", INTERFACE, "tx", "off", "sg", "off", "tso", "off", "gso", "off", "gro", "off", "lro",
-     "off"])
-subprocess.check_output(["sudo", "ifconfig", INTERFACE, "-multicast"])
+sys_config = {'interface': 'enp0s20f0u1',
+              'driver_path': '/usr/local/bin/chromedriver',
+              'pcap_path': '/home/solana/5g/data/5G_data_September_2020/file_transfer/dropbox/upload/pcaps/'
+              }
 
-PCAP_PATH = '/home/solana/5g/data/5G_data_September_2020/file_transfer/dropbox/upload/pcaps/'
+dropbox_config = {'access_token': 'Z-XhybPdTJwAAAAAAAAAAZL94Qi9V2qGg38WpJHJPEzUbQMJe0i69TJ6sqXwemxL',
+                  'input_files_path': r"C:\Users\Owner\mltat\data\mltat\Dataset\Solana-5G\web\chrome\features",
+                  'upload_path': '/inputs/'
+                  }
 
-dbx.users_get_current_account()
-files = [f for f in os.listdir(os.path.join('inputs/')) if os.path.isfile(os.path.join('inputs/', f))]
-print(files)
-ignore_files = []
-for x in files:
-    try:
-        with open('inputs/' + x, "rb") as f:
-            file_size = os.path.getsize('inputs/' + x)
-            print(file_size)
-            print(f)
-            CHUNK_SIZE = 4 * 1024 * 1024
-            PCAP_NAME = x.replace("_db.pcap", "") + '_db_uplink.pcap'
-            p = subprocess.Popen(['sudo', 'tcpdump', 'ip and  not ether multicast',
-                                  '-i', INTERFACE, '-vvv', '-s 0',
-                                  '-w', PCAP_PATH + PCAP_NAME],
-                                 stdout=subprocess.PIPE)
-            if file_size <= CHUNK_SIZE:
-                print(dbx.files_upload(f.read(), '/' + 'inputs/' + x, mute=True))
-            else:
-                upload_session_start_result = dbx.files_upload_session_start(f.read(CHUNK_SIZE))
-                cursor = dropbox.files.UploadSessionCursor(session_id=upload_session_start_result.session_id,
-                                                           offset=f.tell())
-                commit = dropbox.files.CommitInfo(path='/' + 'inputs/' + x)
-                while f.tell() < file_size:
-                    if (file_size - f.tell()) <= CHUNK_SIZE:
-                        print(dbx.files_upload_session_finish(f.read(CHUNK_SIZE), cursor, commit))
-                    else:
-                        dbx.files_upload_session_append(f.read(CHUNK_SIZE), cursor.session_id, cursor.offset)
-                        cursor.offset = f.tell()
-    except:
-        ignore_files.append(x)
-        pass
-    print(' =============== uploaded', 'inputs/' + x)
-    cmd = "sudo killall  tcpdump"
-    print('================= ignore_files ================= :')
+
+# Apply Filters
+def applyfilters():
+    subprocess.check_output(["sudo", "ethtool", "-K", sys_config['interface'], "tx", "off", "sg", "off", "tso", "off",
+                         "gso", "off", "gro", "off", "lro", "off"])
+    subprocess.check_output(["sudo", "ifconfig", sys_config['interface'], "-multicast"])
+
+
+def listFiles(path=None):
+    files = []
+    for p, d, f in os.walk(path):
+        for file in f:
+            files.append(os.path.join(p, file))
+    return files
+
+
+def startDataCapture(file):
+    now = datetime.datetime.now()
+    pcap_name = file.replace(".pcap", "") + '_db_uplink.pcap'
+    pcap = os.path.join(sys_config['pcap_path'], pcap_name)
+    subprocess.Popen(['sudo', 'tcpdump', 'ip and  not ether multicast and not ether broadcast',
+                      '-i', sys_config['interface'],
+                      '-vvv', '-s 0',
+                      '-w', pcap],
+                     stdout=subprocess.PIPE)
+
+
+def main():
+    dbx = dropbox.Dropbox(dropbox_config['access_token'])
+    files = listFiles(path=dropbox_config['input_files_path'])
+    ignore_files = []
+    file_num = 1
+    for file in files:
+        # startDataCapture(file)
+        try:
+            upload_path = dropbox_config['upload_path'] + os.path.basename(file)
+            with open(file, 'rb') as f:
+                dbx.files_upload(f.read(), upload_path, mute=True)
+        except:
+            ignore_files.append(file)
+            pass
+        print(' ==== uploaded {}-{}: {}'.format(len(files), file_num, os.path.basename(file)))
+        file_num += 1
+        # os.system("sudo killall  tcpdump")
+    print('========= ignored_files =========== :')
     for f in ignore_files:
         print(f)
-    os.system(cmd)
+
+
+if __name__ == "__main__":
+    # applyfilters()
+    main()
