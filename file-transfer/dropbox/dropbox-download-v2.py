@@ -30,8 +30,7 @@ def listFiles(path=None):
 
 
 def startDataCapture(file):
-    now = datetime.datetime.now()
-    pcap_name = file.replace(".pcap", "") + '_db_uplink.pcap'
+    pcap_name = file.replace(".pcap", "") + '_db_downlink.pcap'
     pcap = os.path.join(sys_config['pcap_path'], pcap_name)
     subprocess.Popen(['sudo', 'tcpdump', 'ip and  not ether multicast and not ether broadcast',
                       '-i', sys_config['interface'],
@@ -43,13 +42,11 @@ def startDataCapture(file):
 def main():
     dbx = dropbox.Dropbox(dropbox_config['access_token'])
     response = dbx.files_list_folder(dropbox_config['dropbox_download_path'])
-    # print(list(response.entries))
     total_files = len(list(response.entries))
-    ignore_files = []
     file_num = 1
     print("Total {} files, starting download...".format(total_files))
     for file in response.entries:
-	    # startDataCapture(file)
+        # startDataCapture(file)
         file_name = file.name
         with open(dropbox_config['download_files_path'] + file_name, "wb") as f:
             metadata, res = dbx.files_download(path=dropbox_config['dropbox_download_path'] + file_name)
